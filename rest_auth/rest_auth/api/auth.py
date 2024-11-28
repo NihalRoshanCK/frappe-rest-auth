@@ -2,7 +2,7 @@ import frappe
 from frappe.utils.password import set_encrypted_password, get_decrypted_password
 from frappe import _
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def login(username, password):
     try:
         # Authenticate the user
