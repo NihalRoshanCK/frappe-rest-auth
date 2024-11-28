@@ -8,21 +8,21 @@ def login(username, password):
         authenticated_user = login_manager.check_password(username, password)
 
         if authenticated_user:
+            # Generate API Key and Secret
             api_secret = generate_keys(authenticated_user)
-            user_doc = frappe.get_doc('User', authenticated_user)
 
-            response = {
+            # Fetch fresh data for the response
+            user_doc = frappe.get_doc('User', authenticated_user)
+            user_doc.reload()  # Reload to get updated data
+
+            # Prepare success response
+            frappe.response["message"] = {
                 "success_key": 1,
                 "message": "Authentication successful",
                 "api_key": user_doc.api_key,
+                "api_secret": api_secret,
                 "user": authenticated_user
             }
-
-            # Include secret only if newly generated
-            if api_secret:
-                response["api_secret"] = api_secret
-
-            frappe.response["message"] = response
         else:
             frappe.response["message"] = {
                 "success_key": 0,
@@ -35,31 +35,37 @@ def login(username, password):
         }
 
 
-
 def generate_keys(user):
     user_details = frappe.get_doc('User', user)
 
-    # Expire and regenerate only if not present
-    if not user_details.api_key:
-        api_key = frappe.generate_hash(length=15)
-        user_details.api_key = api_key
-    else:
-        api_key = user_details.api_key
+    # Expire and regenerate keys
+    if user_details.api_secret:
+        frappe.logger().info(f"Expiring API Secret for user: {user_details.name}")
+        user_details.api_secret = None
 
-    if not user_details.api_secret:
-        api_secret = frappe.generate_hash(length=15)
-        user_details.api_secret = api_secret
-    else:
-        api_secret = user_details.api_secret
+    if user_details.api_key:
+        frappe.logger().info(f"Expiring API Key for user: {user_details.name}")
+        user_details.api_key = None
 
-    # Save changes if necessary
+    # Generate new keys
+    api_secret = frappe.generate_hash(length=15)
+    api_key = frappe.generate_hash(length=15)
+
+    user_details.api_secret = api_secret
+    user_details.api_key = api_key
+
+    # Temporarily set user to Administrator for saving
     current_user = frappe.session.user
     frappe.set_user("Administrator")
     try:
         user_details.save()
+        frappe.db.commit()  # Ensure data is written to the database
+        frappe.clear_cache(user=user_details.name)  # Clear cache for user
     finally:
         frappe.set_user(current_user)
 
+    # Debug updated values
+    frappe.logger().info(f"New API Key: {user_details.api_key}, API Secret: {user_details.api_secret}")
+    print(f"New API Key: {user_details.api_key}, API Secret: {user_details.api_secret}")
+
     return api_secret
-
-
