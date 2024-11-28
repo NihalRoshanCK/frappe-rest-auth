@@ -9,11 +9,12 @@ def login(username, password):
         authenticated_user = login_manager.check_password(username, password)
         
         if authenticated_user:
-            # Fetch the User object
-            user_doc = frappe.get_doc('User', authenticated_user)
 
             # Generate API Key and Secret if not already present
             api_secret = generate_keys(authenticated_user)
+
+            # Fetch the User object
+            user_doc = frappe.get_doc('User', authenticated_user)
 
             # Prepare success response
             frappe.response["message"] = {
