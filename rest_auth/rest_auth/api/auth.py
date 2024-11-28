@@ -1,30 +1,30 @@
 import frappe
+from frappe.utils.password import set_encrypted_password, get_decrypted_password
 from frappe import _
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def login(username, password):
     try:
-        # Initialize login manager and check credentials
+        # Authenticate the user
         login_manager = frappe.auth.LoginManager()
         authenticated_user = login_manager.check_password(username, password)
-        
-        if authenticated_user:
-            # Fetch the User object
-            user_doc = frappe.get_doc('User', authenticated_user)
 
-            # Generate API Key and Secret if not already present
+        if authenticated_user:
+            # Generate or regenerate API Key and Secret
             api_secret = generate_keys(authenticated_user)
 
-            # Prepare success response
+            # Fetch the User document to get the API key
+            user_doc = frappe.get_doc("User", authenticated_user)
+
+            # Prepare a secure response
             frappe.response["message"] = {
                 "success_key": 1,
                 "message": "Authentication successful",
                 "api_key": user_doc.api_key,
-                "api_secret": api_secret,
                 "user": authenticated_user
             }
         else:
-            # Handle failed login
+            # Invalid username or password
             frappe.response["message"] = {
                 "success_key": 0,
                 "message": "Invalid username or password"
@@ -37,37 +37,33 @@ def login(username, password):
             "message": f"An error occurred: {str(e)}"
         }
 
-
 def generate_keys(user):
-    user_details = frappe.get_doc('User', user)
+    """
+    Generate or regenerate API keys and secrets for a user.
+    Expire the old keys, if any, and generate new ones.
+    """
+    user_doc = frappe.get_doc('User', user)
 
-    # Expire and regenerate the API Secret
-    if user_details.api_secret:
-        # Log the expiration of the existing secret
-        frappe.logger().info(f"Expiring API Secret for user: {user_details.name}")
-        user_details.api_secret = None
+    # Expire old API secret
+    if user_doc.api_secret:
+        frappe.logger().info(f"Expiring old API Secret for user: {user_doc.name}")
+        set_encrypted_password("User", user_doc.name, None, "api_secret")
 
-    # Generate a new API Secret
-    api_secret = frappe.generate_hash(length=15)
-    user_details.api_secret = api_secret
+    # Generate a new API secret and encrypt it
+    new_api_secret = frappe.generate_hash(length=15)
+    set_encrypted_password("User", user_doc.name, new_api_secret, "api_secret")
 
-    # Expire and regenerate the API Key
-    if user_details.api_key:
-        # Log the expiration of the existing key
-        frappe.logger().info(f"Expiring API Key for user: {user_details.name}")
-        user_details.api_key = None
+    # Expire old API key
+    if user_doc.api_key:
+        frappe.logger().info(f"Expiring old API Key for user: {user_doc.name}")
+        user_doc.api_key = None
 
-    # Generate a new API Key
-    api_key = frappe.generate_hash(length=15)
-    user_details.api_key = api_key
+    # Generate a new API key
+    user_doc.api_key = frappe.generate_hash(length=15)
 
-    # Temporarily set user to Administrator for saving
-    current_user = frappe.session.user
-    frappe.set_user("Administrator")
-    try:
-        user_details.save()
-    finally:
-        # Reset the user to the original session user
-        frappe.set_user(current_user)
+    # Save changes with elevated privileges
+    with frappe.set_user("Administrator"):
+        user_doc.save()
 
-    return api_secret
+    # Return the new API secret for immediate use
+    return new_api_secret
