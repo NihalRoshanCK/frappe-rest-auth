@@ -2,9 +2,9 @@ import frappe
 from frappe.auth import LoginManager
 
 @frappe.whitelist(allow_guest = True)
-def app_login(usr,pwd):
+def login(username,password):
 	login_manager = LoginManager()
-	login_manager.authenticate(usr,pwd)
+	login_manager.authenticate(username,password)
 	login_manager.post_login()
 	if frappe.response['message'] == 'Logged In':
 		user = login_manager.user
