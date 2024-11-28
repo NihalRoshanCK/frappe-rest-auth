@@ -9,8 +9,7 @@ def login(username, password):
 
         if authenticated_user:
             # Generate API Key and Secret
-            api_secret = generate_keys(authenticated_user)
-
+            api_key , api_secret =  frappe.generate_auth_token(authenticated_user)
             # Fetch fresh data for the response
             user_doc = frappe.get_doc('User', authenticated_user)
             user_doc.reload()  # Reload to get updated data
@@ -19,7 +18,7 @@ def login(username, password):
             frappe.response["message"] = {
                 "success_key": 1,
                 "message": "Authentication successful",
-                "api_key": user_doc.api_key,
+                "api_key": api_key,
                 "api_secret": api_secret,
                 "user": authenticated_user
             }
