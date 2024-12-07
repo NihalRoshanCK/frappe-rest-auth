@@ -24,18 +24,12 @@ def login(username, password):
 
 
 def generate_new_api_key_and_secret(user):
-    """Generate a new API Key and Secret for the user, invalidating the old ones."""
     user_doc = frappe.get_doc("User", user)
-
-    # Invalidate old sessions associated with the old API Key
-    if user_doc.api_key:
-        invalidate_api_sessions(user_doc.api_key)
 
     # Generate new API Key and Secret
     new_api_key = frappe.generate_hash(length=15)
     new_api_secret = frappe.generate_hash(length=15)
 
-    # Update the user's API Key and Secret
     user_doc.api_key = new_api_key
     user_doc.api_secret = new_api_secret
     user_doc.save(ignore_permissions=True)
@@ -52,7 +46,7 @@ def invalidate_api_sessions(api_key):
         return
 
     # Remove all active sessions tied to this API Key
-    frappe.db.delete("tabSessions", {"api_key": api_key})
+    frappe.db.delete("tabSession", {"api_key": api_key})
     frappe.db.commit()
 
 
