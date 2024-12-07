@@ -5,19 +5,17 @@ from frappe.auth import LoginManager
 def login(username, password):
     try:
         # Authenticate the user
-        login_manager = LoginManager()
+        login_manager = frappe.auth.LoginManager()
         login_manager.authenticate(username, password)
         login_manager.post_login()
 
-        # Get the user
+        # Generate new API Key and Secret for the user
         user = login_manager.user
+        new_credentials = generate_new_api_key_and_secret(user)
 
-        # Generate new API Key and Secret, invalidating old ones
-        api_credentials = generate_new_api_key_and_secret(user)
-
-        # Response payload
+        # Return the new credentials and user details
         frappe.response["message"] = "Logged In"
-        frappe.response["key_details"] = api_credentials
+        frappe.response["key_details"] = new_credentials
         frappe.response["user_details"] = get_user_details(user)
 
     except frappe.exceptions.AuthenticationError:
@@ -26,27 +24,43 @@ def login(username, password):
 
 
 def generate_new_api_key_and_secret(user):
-    """Generate new API Key and Secret for a user and invalidate old ones."""
+    """Generate a new API Key and Secret for the user, invalidating the old ones."""
     user_doc = frappe.get_doc("User", user)
+
+    # Invalidate old sessions associated with the old API Key
+    if user_doc.api_key:
+        invalidate_api_sessions(user_doc.api_key)
+
+    # Generate new API Key and Secret
     new_api_key = frappe.generate_hash(length=15)
     new_api_secret = frappe.generate_hash(length=15)
 
-    # Set new API Key and Secret
+    # Update the user's API Key and Secret
     user_doc.api_key = new_api_key
     user_doc.api_secret = new_api_secret
     user_doc.save(ignore_permissions=True)
 
-    # Return new credentials
     return {
         "api_key": new_api_key,
         "api_secret": new_api_secret,
     }
 
 
+def invalidate_api_sessions(api_key):
+    """Invalidate all sessions associated with the given API Key."""
+    if not api_key:
+        return
+
+    # Remove all active sessions tied to this API Key
+    frappe.db.delete("tabSessions", {"api_key": api_key})
+    frappe.db.commit()
+
+
 def get_user_details(user):
-    """Fetch user details."""
-    return frappe.get_all(
+    """Retrieve details of the user."""
+    user_details = frappe.get_all(
         "User",
         filters={"name": user},
-        fields=["name", "first_name", "last_name", "email", "mobile_no", "gender", "role_profile_name"],
+        fields=["name", "first_name", "last_name", "email", "mobile_no", "gender", "role_profile_name"]
     )
+    return user_details if user_details else {}
