@@ -6,13 +6,17 @@ def login(username, password):
     try:
         login_manager = LoginManager()
         login_manager.authenticate(username, password)
+
+        # Check for existing session and terminate if necessary
+        user = login_manager.user
+        terminate_previous_sessions(user)
+
         login_manager.post_login()
 
         # Explicitly set the response message
         frappe.response['message'] = 'Logged In'
         
-        # Generate API keys and user details
-        user = login_manager.user
+        # Generate new API keys for the session
         frappe.response['key_details'] = generate_key(user)
         frappe.response['user_details'] = get_user_details(user)
 
@@ -20,7 +24,24 @@ def login(username, password):
         frappe.response['message'] = 'Invalid login'
         return False
 
+def terminate_previous_sessions(user):
+    """Terminate previous sessions of the user."""
+    # Fetch current sessions for the user
+    sessions = frappe.get_all(
+        "Session",
+        filters={"user": user},
+        fields=["name"]
+    )
+
+    # Logout all active sessions for the user
+    for session in sessions:
+        frappe.db.delete("Session", {"name": session['name']})
+        frappe.cache().hdel('session', session['name'])
+
+    frappe.db.commit()
+
 def generate_key(user):
+    """Generate or retrieve API keys for the user."""
     user_details = frappe.get_doc("User", user)
     api_secret = api_key = ''
     if not user_details.api_key and not user_details.api_secret:
@@ -35,6 +56,7 @@ def generate_key(user):
     return {"api_secret": api_secret, "api_key": api_key}
 
 def get_user_details(user):
+    """Fetch user details."""
     user_details = frappe.get_all(
         "User",
         filters={"name": user},
