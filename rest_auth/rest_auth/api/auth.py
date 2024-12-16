@@ -55,6 +55,6 @@ def get_user_details(user):
     user_details = frappe.get_all(
         "User",
         filters={"name": user},
-        fields=["name", "first_name", "last_name", "email", "mobile_no", "gender", "role_profile_name"]
+        fields=["name", "first_name", "last_name", "email", "mobile_no", "gender", "role_profile_name", "phone_id"]
     )
     return user_details if user_details else {}
