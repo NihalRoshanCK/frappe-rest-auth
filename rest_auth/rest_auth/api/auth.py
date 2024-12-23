@@ -2,7 +2,7 @@ import frappe
 from frappe.auth import LoginManager
 
 @frappe.whitelist(allow_guest=True)
-def login(username, password):
+def login(username, password,phone_id):
     try:
         # Authenticate the user
         login_manager = frappe.auth.LoginManager()
@@ -12,6 +12,11 @@ def login(username, password):
         # Generate new API Key and Secret for the user
         user = login_manager.user
         new_credentials = generate_new_api_key_and_secret(user)
+        if new_credentials["phone_id"] is not None and new_credentials["phone_id"] != phone_id:
+            frappe.response["message"] = "Phone ID mismatch"
+            return False
+        else:
+            frappe.db.set_value('User', user, 'phone_id', phone_id)
 
         # Return the new credentials and user details
         frappe.response["message"] = "Logged In"
