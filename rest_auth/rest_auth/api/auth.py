@@ -2,7 +2,7 @@ import frappe
 from frappe.auth import LoginManager
 
 @frappe.whitelist(allow_guest=True)
-def login(username, password,phone_id):
+def login(username, password, phone_id=None):
     try:
         # Authenticate the user
         login_manager = frappe.auth.LoginManager()
@@ -12,10 +12,14 @@ def login(username, password,phone_id):
         # Generate new API Key and Secret for the user
         user = login_manager.user
         new_credentials = generate_new_api_key_and_secret(user)
-        if new_credentials["phone_id"] is not None and new_credentials["phone_id"] != phone_id:
+
+        # Check for phone_id mismatch
+        if phone_id and new_credentials.get("phone_id") and new_credentials["phone_id"] != phone_id:
             frappe.response["message"] = "Phone ID mismatch"
             return False
-        else:
+
+        # Save the phone_id for the user if provided
+        if phone_id:
             frappe.db.set_value('User', user, 'phone_id', phone_id)
 
         # Return the new credentials and user details
@@ -26,9 +30,14 @@ def login(username, password,phone_id):
     except frappe.exceptions.AuthenticationError:
         frappe.response["message"] = "Invalid login"
         return False
+    except KeyError as e:
+        frappe.log_error(f"Missing key: {e}", "Login Error")
+        frappe.response["message"] = f"KeyError: {e}"
+        return False
 
 
 def generate_new_api_key_and_secret(user):
+    """Generate new API key and secret for a user."""
     user_doc = frappe.get_doc("User", user)
 
     # Generate new API Key and Secret
@@ -42,6 +51,7 @@ def generate_new_api_key_and_secret(user):
     return {
         "api_key": new_api_key,
         "api_secret": new_api_secret,
+        "phone_id": user_doc.get("phone_id")  # Include phone_id if it exists
     }
 
 
@@ -60,6 +70,9 @@ def get_user_details(user):
     user_details = frappe.get_all(
         "User",
         filters={"name": user},
-        fields=["name", "first_name", "last_name", "email", "mobile_no", "gender", "role_profile_name", "phone_id"]
+        fields=[
+            "name", "first_name", "last_name", "email", "mobile_no",
+            "gender", "role_profile_name", "phone_id"
+        ]
     )
-    return user_details if user_details else {}
+    return user_details[0] if user_details else {}
