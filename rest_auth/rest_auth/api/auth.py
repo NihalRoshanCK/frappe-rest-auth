@@ -12,9 +12,9 @@ def login(username, password, phone_id=None):
         # Generate new API Key and Secret for the user
         user = login_manager.user
         new_credentials = generate_new_api_key_and_secret(user)
-
+        user_data=get_user_details(user)
         # Check for phone_id mismatch
-        if phone_id and new_credentials.get("phone_id") and new_credentials["phone_id"] != phone_id:
+        if phone_id and user_data.get("phone_id") and user_data["phone_id"] != phone_id:
             frappe.response["message"] = "Phone ID mismatch"
             return False
 
@@ -25,7 +25,7 @@ def login(username, password, phone_id=None):
         # Return the new credentials and user details
         frappe.response["message"] = "Logged In"
         frappe.response["key_details"] = new_credentials
-        frappe.response["user_details"] = get_user_details(user)
+        frappe.response["user_details"] = user_data
 
     except frappe.exceptions.AuthenticationError:
         frappe.response["message"] = "Invalid login"
