@@ -20,7 +20,8 @@ def login(username, password, phone_id=None):
 
         # Save the phone_id for the user if provided
         if phone_id:
-            frappe.db.set_value('User', user, 'phone_id', phone_id)
+            frappe.db.set_value('User', user, 'phone_id', phone_id, update_modified=False)
+            frappe.db.commit()
 
         # Return the new credentials and user details
         frappe.response["message"] = "Logged In"
@@ -51,7 +52,6 @@ def generate_new_api_key_and_secret(user):
     return {
         "api_key": new_api_key,
         "api_secret": new_api_secret,
-        "phone_id": user_doc.get("phone_id")  # Include phone_id if it exists
     }
 
 
