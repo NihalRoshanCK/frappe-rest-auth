@@ -1,5 +1,16 @@
 import frappe
 from frappe.auth import LoginManager
+from frappe.model.document import Document
+
+class CustomUser(Document):
+    def on_update(self):
+        super().on_update()  # Ensure default behavior
+        
+        if not self.enabled:  # If user is disabled
+            self.api_key = None
+            self.api_secret = None
+            self.save(ignore_permissions=True)  # Save changes ignoring permissions
+
 
 @frappe.whitelist(allow_guest=True)
 def login(username, password, phone_id=None):
