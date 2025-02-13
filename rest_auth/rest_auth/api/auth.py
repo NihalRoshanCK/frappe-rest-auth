@@ -30,7 +30,7 @@ def login(username, password, phone_id=None):
 
     except frappe.exceptions.AuthenticationError:
         frappe.response["message"] = "Invalid login"
-        return False
+        return "Invalid login"
     except KeyError as e:
         frappe.log_error(f"Missing key: {e}", "Login Error")
         frappe.response["message"] = f"KeyError: {e}"
