@@ -34,7 +34,7 @@ def login(username, password, phone_id=None):
     except KeyError as e:
         frappe.log_error(f"Missing key: {e}", "Login Error")
         frappe.response["message"] = f"KeyError: {e}"
-        return frappe.response["message"]
+        return f"KeyError: {e}"
 
 
 def generate_new_api_key_and_secret(user):
