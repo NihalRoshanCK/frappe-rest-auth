@@ -16,7 +16,7 @@ def login(username, password, phone_id=None):
         # Check for phone_id mismatch
         if phone_id and user_data.get("phone_id") and user_data["phone_id"] != phone_id:
             frappe.response["message"] = "Phone ID mismatch"
-            return False
+            return "Phone ID mismatch"
 
         # Save the phone_id for the user if provided
         if phone_id:
