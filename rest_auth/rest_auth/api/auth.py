@@ -24,6 +24,10 @@ def login(username, password, phone_id=None):
         user = login_manager.user
         new_credentials = generate_new_api_key_and_secret(user)
         user_data=get_user_details(user)
+
+        if not user_data.get("enabled", False):
+            return "Please contact the Admin"
+        
         # Check for phone_id mismatch
         if phone_id and user_data.get("phone_id") and user_data["phone_id"] != phone_id:
             frappe.response["message"] = "Phone ID mismatch"
