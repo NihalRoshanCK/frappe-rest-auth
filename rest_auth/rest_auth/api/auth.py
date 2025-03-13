@@ -87,7 +87,7 @@ def get_user_details(user):
         filters={"name": user},
         fields=[
             "name", "first_name", "last_name", "email", "mobile_no",
-            "gender", "role_profile_name", "phone_id"
+            "gender", "role_profile_name", "phone_id","enabled"
         ]
     )
     return user_details[0] if user_details else {}
