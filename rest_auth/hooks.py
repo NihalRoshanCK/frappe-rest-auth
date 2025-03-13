@@ -130,7 +130,7 @@ app_license = "mit"
 # Override standard doctype classes
 
 override_doctype_class = {
-    "User": "rest_auth.rest_auth.api.CustomUser"
+    "User": "rest_auth.rest_auth.api.auth.CustomUser"
 }
 
 # Document Events
