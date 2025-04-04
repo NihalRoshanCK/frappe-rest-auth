@@ -13,7 +13,7 @@ class CustomUser(User):
 
 
 @frappe.whitelist(allow_guest=True)
-def login(username, password, phone_id=None):
+def login(username, password):
     try:
         # Authenticate the user
         login_manager = frappe.auth.LoginManager()
@@ -28,16 +28,6 @@ def login(username, password, phone_id=None):
         if not user_data.get("enabled", False):
             return "Please contact the Admin"
         
-        # Check for phone_id mismatch
-        if phone_id and user_data.get("phone_id") and user_data["phone_id"] != phone_id:
-            frappe.response["message"] = "Phone ID mismatch"
-            return "Phone ID mismatch"
-
-        # Save the phone_id for the user if provided
-        if phone_id:
-            frappe.db.set_value('User', user, 'phone_id', phone_id, update_modified=False)
-            frappe.db.commit()
-
         # Return the new credentials and user details
         frappe.response["message"] = "Logged In"
         frappe.response["key_details"] = new_credentials
@@ -87,7 +77,7 @@ def get_user_details(user):
         filters={"name": user},
         fields=[
             "name", "first_name", "last_name", "email", "mobile_no",
-            "gender", "role_profile_name", "phone_id","enabled"
+            "gender", "role_profile_name","enabled"
         ]
     )
     return user_details[0] if user_details else {}
